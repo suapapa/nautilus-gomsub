@@ -4,7 +4,7 @@
 # gom_sub.py : search subscript(like smi or srt) on the Gom Subtitle PDS;
 # http://gom.gomtv.com/jmdb/index.html
 #
-# Copyright (C) 2010 by Homin Lee <ff4500@gmail.com>
+# Copyright (C) 2010-2012 by Homin Lee <homin.lee@suapapa.net>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,29 +16,27 @@ import sys
 import urllib
 import webbrowser
 
+
 GOM_SUB_ADDR = "http://search.gomtv.com/searchjm.gom?whr=7600&spage=0&preface=0&key=%s"
 
 HAS_NAUTILUS = True
 try:
-    import nautilus
-    # place this script under ~/.nautilus/python-extensions/
+    from gi.repository import Nautilus, GObject
+    # place this script under ~/.local/share/Nautilus-python/extensions/
 except:
     # maybe we run this script on terminal
     HAS_NAUTILUS = False
 
 
-def querySub(searchKey):
+def _querySub(searchKey):
     return GOM_SUB_ADDR%\
         urllib.quote_plus(searchKey.decode("utf-8").encode("cp949"))
 
 
 def searchGomSubPDS(movieName):
+    print movieName
     if not movieName.rfind('.') == -1:
         movieName = movieName[:movieName.rfind('.')] # chop the ext.
-
-#        if os.path.exists(movieName+'.smi')\
-#            or os.path.exists(movieName+'.srt'):
-#            print("Seems like u already have the sub.")
 
     # increase the chance
     movieName = movieName.replace('.', ' ')
@@ -47,14 +45,13 @@ def searchGomSubPDS(movieName):
 
     sl = movieName.split()
     while sl:
-        testAddr = querySub(' '.join(sl)) 
-        # print "Trying %s"%testAddr
-        tempSite = urllib.urlopen(testAddr)
+        queryAddr = _querySub(' '.join(sl))
+        tempSite = urllib.urlopen(queryAddr)
         tempDoc = tempSite.read(-1)
 
         # check if there r any subtitle found.
         if tempDoc.find("<div id='search_failed_smi'>") == -1:
-            webbrowser.open(testAddr)
+            webbrowser.open(queryAddr)
             return True
 
         # our search key was too long. let's chop more!
@@ -65,7 +62,7 @@ def searchGomSubPDS(movieName):
     return False
 
 if HAS_NAUTILUS:
-    class GomSubExtension(nautilus.MenuProvider):
+    class GomSubMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         def __init__(self):
             pass
         
@@ -84,16 +81,16 @@ if HAS_NAUTILUS:
                 return
 
             file = files[0]
-
             if not "video/" in file.get_mime_type():
                  return
 
             if file.get_uri_scheme() != 'file':
                 return
 
-            item = nautilus.MenuItem('Nautilus::search_gom_sub_pds',
-                                     '자막 검색',
-                                     '곰 자막 자료실 검색')
+            item = Nautilus.MenuItem(name='Nautilus::search_gom_sub_pds',
+                                     label='자막 검색',
+                                     tip='곰 자막 자료실 검색',
+                                     icon='')
             item.connect('activate', self.menu_activate_cb, file)
             return item,
 
