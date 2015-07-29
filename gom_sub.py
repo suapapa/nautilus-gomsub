@@ -1,10 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
- 
+
 # gom_sub.py : search subscript(like smi or srt) on the Gom Subtitle PDS;
 # http://gom.gomtv.com/jmdb/index.html
 #
-# Copyright (C) 2010-2012 by Homin Lee <homin.lee@suapapa.net>
+# Copyright (C) 2010-2015 by Homin Lee <homin.lee@suapapa.net>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,12 +17,17 @@ import urllib
 import webbrowser
 
 
-GOM_SUB_ADDR = "http://search.gomtv.com/searchjm.gom?whr=7600&spage=0&preface=0&key=%s"
+GOM_SUB_ADDR = "http://gom.gomtv.com/main/index.html?ch=subtitles&pt=l&menu=subtitles&lang=0&sValue=%s"
+
 
 HAS_NAUTILUS = True
 try:
-    from gi.repository import Nautilus, GObject
+    # install python-nautilus package;
+    #     $ sudo apt-get install python-nautilus
     # place this script under ~/.local/share/Nautilus-python/extensions/
+    #     $ mkdir -p ~/.local/share/nautilus-python/extensions
+    #     $ cp gom_sub.py ~/.local/share/nautilus-python/extensions/
+    from gi.repository import Nautilus, GObject
 except:
     # maybe we run this script on terminal
     HAS_NAUTILUS = False
@@ -30,7 +35,7 @@ except:
 
 def _querySub(searchKey):
     return GOM_SUB_ADDR%\
-        urllib.quote_plus(searchKey.decode("utf-8").encode("cp949"))
+        urllib.quote_plus(searchKey)
 
 
 def searchGomSubPDS(movieName):
@@ -50,7 +55,7 @@ def searchGomSubPDS(movieName):
         tempDoc = tempSite.read(-1)
 
         # check if there r any subtitle found.
-        if tempDoc.find("<div id='search_failed_smi'>") == -1:
+        if tempDoc.find('<p class="total">총 <span>0</span>개</p>') == -1:
             webbrowser.open(queryAddr)
             return True
 
@@ -65,17 +70,17 @@ if HAS_NAUTILUS:
     class GomSubMenuProvider(GObject.GObject, Nautilus.MenuProvider):
         def __init__(self):
             pass
-        
+
         def menu_activate_cb(self, menu, file):
             if file.is_gone():
                 return
-             
+
             # Strip leading file://
             filename = urllib.unquote(file.get_uri()[7:])
             result = searchGomSubPDS(os.path.basename(filename))
             if not result:
                 os.system('zenity --error --title="자막검색" --text="찾지 못했습니다."')
-            
+
         def get_file_items(self, window, files):
             if len(files) != 1:
                 return
